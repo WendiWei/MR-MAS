@@ -6,5 +6,5 @@ An End-to-End Multi-Agent Platform for Autonomous Mendelian Randomization Analys
 # perform
   代码执行
 # analyse
-  结果
+  结果不错
 
