@@ -203,19 +203,7 @@ class PubMedSearch:
         text = re.sub(r'\\[a-zA-Z]+\{.*?\}', '', text)
         return text.strip()
 
-        # # 如果想下载PDF，解除注释：
-        # pdf_url = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/pdf/"
-        # try:
-        #     response = requests.get(pdf_url, timeout=15)
-        #     if response.status_code == 200:
-        #         filename = f"{pmcid}.pdf"
-        #         with open(filename, "wb") as f:
-        #             f.write(response.content)
-        #         return filename
-        #     else:
-        #         return f"Failed to download PDF, HTTP status {response.status_code}"
-        # except Exception as e:
-        #     return f"Download error: {str(e)}"
+    
 
     def get_paper_pmcid(self, pmid):
         """
