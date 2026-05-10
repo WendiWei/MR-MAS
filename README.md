@@ -1,4 +1,4 @@
-# MAMR
+# MR-MAS
 An End-to-End Multi-Agent Syatem for Autonomous Mendelian Randomization Analysis
 
 # Overview
