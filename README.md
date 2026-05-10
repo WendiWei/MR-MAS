@@ -1,16 +1,16 @@
 # MAMR
-An End-to-End Multi-Agent Platform for Autonomous Mendelian Randomization Analysis
+An End-to-End Multi-Agent Syatem for Autonomous Mendelian Randomization Analysis
 
 # Overview
 
-This repository provides the reference implementation of the multi-agent platform for automated Mendelian randomization (MR) analysis described in the main paper.
+This repository provides the reference implementation of the multi-agent system for automated Mendelian randomization (MR) analysis described in the main paper.
 
 The system implements an end-to-end MR workflow by coordinating multiple large language model (LLM)-driven agents under a centralized workflow orchestrator. 
 It automates research planning, GWAS data preparation, MR analysis, result interpretation, and manuscript drafting, while preserving transparency and reproducibility.
 
 # System Design
 
-The platform follows a stage-based workflow corresponding to the six phases described in the paper:
+The system follows a stage-based workflow corresponding to the six phases described in the paper:
 
 Research plan formulation
 GWAS data acquisition and preprocessing
