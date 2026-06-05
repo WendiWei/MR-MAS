@@ -108,21 +108,6 @@ MR-MAS supports four stage-level actions:
 
 During repair, failed code, error messages, and execution logs are stored in short-term memory. MR-MAS then retrieves relevant MRKB entries and uses them to guide targeted code regeneration.
 
-## MR Methods
-
-MR-MAS supports conventional and robust MR methods through MRKB, including:
-
-- Inverse-Variance Weighted regression
-- MR-Egger regression
-- Weighted median
-- Weighted mode
-- MR-PRESSO
-- MRMix
-- GSMR
-- CAUSE
-- Related MR methods and package-specific implementations
-
-The supported methods can be extended by adding new YAML entries to the MR Method Library and R Package Library.
 
 ## TraitMatcher
 
@@ -154,21 +139,6 @@ MR-MAS was evaluated from multiple perspectives:
 - **Workflow robustness**: MRKB-guided repair improved code repair success compared with plain LLM-based repair.
 - **Reproducibility**: Repeated workflow executions produced stable causal estimates despite moderate textual variability in generated scripts.
 
-## Data Sources
-
-MR-MAS primarily uses publicly available biomedical resources, including:
-
-- GWAS Catalog for GWAS study retrieval and summary statistics
-- PubMed and PubMed Central for literature retrieval
-- Local R packages for MR analysis and visualization
-
-For the TraitMatcher evaluation, the curated benchmark dataset is included in this repository as:
-
-`data/trait_queries.xlsx`
-
-
-
-The `assets/` directory is used for README images, the `data/` directory stores benchmark datasets, and the `mrkb/` directory stores structured YAML specifications for MR methods and R packages.
 
 ## Intended Use
 
@@ -190,14 +160,6 @@ The code snapshot corresponding to the experiments reported in the manuscript ha
 
 **DOI:** `10.5281/zenodo.20342636`
 
-## Citation
-
-If you use MR-MAS in your research, please cite:
-
-Wendi Wei, Yuling Fan, Lin Li, Thuc Duy Le, Xiaomei Li, Debo Cheng, and Zaiwen Feng.  
-**MR-MAS: An End-to-End Multi-Agent System for Autonomous Mendelian Randomization Analysis.**
-
-The formal citation information will be updated after publication.
 
 ## Disclaimer
 
