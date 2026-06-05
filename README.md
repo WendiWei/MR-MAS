@@ -4,7 +4,7 @@
 
 MR-MAS is an end-to-end multi-agent framework for automated Mendelian Randomization (MR) analysis. It coordinates multiple large language model (LLM)-driven agents with external biomedical resources, local statistical computing tools, and a structured MR Knowledge Base (MRKB) to support scalable, standardized, and reproducible MR research.
 
-![MR-MAS Framework](media/Framework.tif)
+![MR-MAS Framework](media/Framework.png)
 
 ## Overview
 
@@ -29,7 +29,7 @@ The system generates traceable research artifacts, including standardized GWAS d
 
 MR-MAS follows a stage-based workflow corresponding to six major phases.
 
-![MR-MAS Workflow](media/Workflow.tif)
+![MR-MAS Workflow](media/Workflow.png)
 
 ### 1. Research Plan Formulation
 
