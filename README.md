@@ -127,8 +127,6 @@ This dataset contains 168 queries constructed from 24 target traits, with seven 
 
 No additional external datasets are required for this experiment.
 
-![TraitMatcher Results](assets/traitmatcher_results.png)
-
 ## Experimental Evaluation
 
 MR-MAS was evaluated from multiple perspectives:
