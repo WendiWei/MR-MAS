@@ -1,0 +1,68 @@
+MRPRESSO:
+  description: >
+    MR-PRESSO (Mendelian Randomization Pleiotropy RESidual Sum and Outlier) is a method that allows for the evaluation of horizontal pleiotropy in multi-instrument Mendelian Randomization utilizing genome-wide summary association statistics.
+    MR-PRESSO has three components, including:
+    detection of horizontal pleiotropy (MR-PRESSO global test)
+    correction of horizontal pleiotropy via outlier removal (MR-PRESSO outlier test)
+    testing of significant distortion in the causal estimates before and after outlier removal (MR-PRESSO distortion test).
+  package: MRPRESSO
+  install:
+    github: 'devtools::install_github("rondolab/MR-PRESSO")'
+  function: mr_presso
+
+  input_format:
+    required_fields:
+      - SNP
+      - beta.exposure
+      - se.exposure
+      - beta.outcome
+      - se.outcome
+      - effect_allele.exposure
+      - effect_allele.outcome
+      - other_allele.exposure
+      - other_allele.outcome
+
+  prepare_inputs:
+    harmonised_data:
+      type: data.frame
+      description: >
+        A harmonized dataset of exposure and outcome summary statistics.
+        This can be generated using the harmonise_data() function from the TwoSampleMR package.
+      construction: |
+        harmonised_data <- harmonise_data(exposure_data, outcome_data)
+
+  params:
+    BetaOutcome: "beta.outcome"
+    BetaExposure: "beta.exposure"
+    SdOutcome: "se.outcome"
+    SdExposure: "se.exposure"
+    OUTLIERtest: true
+    DISTORTIONtest: true
+    NbDistribution: 1000
+    SignifThreshold: 0.05
+
+  output:
+    type: list
+    fields:
+      - causal_estimate
+      - se
+      - pval
+      - outliers_detected
+      - global_test_pval
+
+  example_code: |
+
+    # Step 1: Harmonize the datasets
+    harmonised_data <- harmonise_data(exposure_data, outcome_data)
+
+    # Step 4: Perform MR using MR-PRESSO
+    library(MRPRESSO)
+    presso_res <- mr_presso(BetaOutcome = "beta.outcome",
+                            BetaExposure = "beta.exposure",
+                            SdOutcome = "se.outcome",
+                            SdExposure = "se.exposure",
+                            OUTLIERtest = TRUE,
+                            DISTORTIONtest = TRUE,
+                            data = harmonised_data,
+                            NbDistribution = 50,
+                            SignifThreshold = 0.05)

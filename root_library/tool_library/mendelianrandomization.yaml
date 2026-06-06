@@ -1,0 +1,25 @@
+MendelianRandomization:
+  install:
+    cran: "install.packages('MendelianRandomization')"
+  functions:
+    mr_input:
+      description: Create an MR input object from SNP-level data.
+      inputs: ["bx", "bxse", "by", "byse"]
+      output: MRInput
+    mr_ivw:
+      description: Run IVW method on MR input object.
+      inputs: ["MRInput"]
+      output: MRResult
+    mr_egger:
+      description: Run MR-Egger regression on MR input object.
+      inputs: ["MRInput"]
+      output: MRResult
+    mr_median:
+      description: Run weighted median method on MR input object.
+      inputs: ["MRInput"]
+      output: MRResult
+  dependencies: []
+  compatible_methods:
+    - IVW
+    - MR-Egger
+    - WeightedMedian

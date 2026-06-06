@@ -1,0 +1,137 @@
+RAPS:
+  description: >
+    MR.RAPS (Robust Adjusted Profile Score) is a robust MR method for weak instruments
+    and systematic/idiosyncratic pleiotropy. In this workflow it is called through
+    TwoSampleMR::mr_raps(), which requires the mr.raps package to be installed.
+  package: mr.raps + TwoSampleMR
+  install:
+    cran_or_runiverse: |
+      install.packages("mr.raps", repos = c("https://mrcieu.r-universe.dev", "https://cloud.r-project.org"))
+    github_fallback: |
+      install.packages("remotes", repos = "https://cloud.r-project.org")
+      remotes::install_github("qingyuanzhao/mr.raps", force = TRUE)
+  function: mr_raps
+  input_format:
+    required_fields: [beta.exposure, se.exposure, beta.outcome, se.outcome]
+  params:
+    parameters: default_parameters()
+  output:
+    type: data.frame | list
+    fields: [b, se, pval, nsnp]
+  common_errors:
+    - error_type: missing_mr_raps_function
+      error_message: "没有"mr.raps"这个函数"
+      cause: "The mr.raps package was not installed or loaded; alternatively, the code called mr.raps::mr.raps directly with an unavailable function name."
+      repair_action: "Install mr.raps and call TwoSampleMR::mr_raps(), or inspect ls('package:mr.raps') for the exact exported function."
+    - error_type: runiverse_403
+      error_message: "HTTP status was '403 Forbidden'"
+      cause: "The R-universe CDN is blocked or inaccessible in the current network."
+      repair_action: "Use GitHub fallback: remotes::install_github('qingyuanzhao/mr.raps', force=TRUE)."
+    - error_type: twosamplemr_wrapper_requires_mr_raps
+      error_message: "You can install mr.raps with install.packages('mr.raps', repos = c('https://mrcieu.r-universe.dev', 'https://cloud.r-project.org'))"
+      cause: "TwoSampleMR::mr_raps is a wrapper and still requires the mr.raps package."
+      repair_action: "Install mr.raps before running TwoSampleMR::mr_raps."
+  example_code: |
+
+        library(data.table)
+
+        # User GWAS Catalog harmonized files
+        exposure_file <- "D:/project/weiwei/research_results/raw_gwas_data/GCST90310294.h.tsv.gz"
+        outcome_file  <- "D:/project/weiwei/research_results/raw_gwas_data/GCST90132315.h.tsv.gz"
+
+        exposure_data <- fread(exposure_file)
+        outcome_data  <- fread(outcome_file)
+
+        exp <- exposure_data[, .(
+          SNP = rsid,
+          beta.exposure = as.numeric(beta),
+          se.exposure = as.numeric(standard_error),
+          effect_allele.exposure = toupper(as.character(effect_allele)),
+          other_allele.exposure = toupper(as.character(other_allele)),
+          pval.exposure = as.numeric(p_value)
+        )]
+
+        out <- outcome_data[, .(
+          SNP = rsid,
+          beta.outcome = as.numeric(beta),
+          se.outcome = as.numeric(standard_error),
+          effect_allele.outcome = toupper(as.character(effect_allele)),
+          other_allele.outcome = toupper(as.character(other_allele)),
+          pval.outcome = as.numeric(p_value)
+        )]
+
+        exp <- exp[!is.na(SNP) & SNP != "" & !is.na(beta.exposure) & !is.na(se.exposure) &
+                     !is.na(effect_allele.exposure) & !is.na(other_allele.exposure) &
+                     !is.na(pval.exposure) & se.exposure > 0]
+        out <- out[!is.na(SNP) & SNP != "" & !is.na(beta.outcome) & !is.na(se.outcome) &
+                     !is.na(effect_allele.outcome) & !is.na(other_allele.outcome) &
+                     !is.na(pval.outcome) & se.outcome > 0]
+
+        exp <- exp[!duplicated(SNP)]
+        out <- out[!duplicated(SNP)]
+
+        gwas_thresh <- 5e-8
+        min_snps <- 3
+        max_snps <- 500
+
+        inst <- exp[pval.exposure < gwas_thresh]
+        inst <- inst[!duplicated(SNP)]
+
+        if (nrow(inst) < min_snps) {
+          warning("Too few genome-wide significant SNPs. Relaxing threshold to 5e-6.")
+          gwas_thresh <- 5e-6
+          inst <- exp[pval.exposure < gwas_thresh]
+          inst <- inst[!duplicated(SNP)]
+        }
+        if (nrow(inst) < min_snps) stop("Too few exposure instruments.")
+
+        dat <- merge(inst, out, by = "SNP")
+
+        is_palindromic <- function(a1, a2) {
+          (a1 == "A" & a2 == "T") | (a1 == "T" & a2 == "A") |
+            (a1 == "C" & a2 == "G") | (a1 == "G" & a2 == "C")
+        }
+
+        dat <- dat[!is_palindromic(effect_allele.exposure, other_allele.exposure)]
+        dat[, same_allele := effect_allele.exposure == effect_allele.outcome &
+              other_allele.exposure == other_allele.outcome]
+        dat[, flip_allele := effect_allele.exposure == other_allele.outcome &
+              other_allele.exposure == effect_allele.outcome]
+        dat <- dat[same_allele == TRUE | flip_allele == TRUE]
+        dat[flip_allele == TRUE, beta.outcome := -beta.outcome]
+        dat[, c("same_allele", "flip_allele") := NULL]
+        setorder(dat, pval.exposure)
+        if (nrow(dat) > max_snps) dat <- dat[1:max_snps]
+        if (nrow(dat) < min_snps) stop("Too few harmonized SNPs.")
+
+
+    if (!requireNamespace("mr.raps", quietly = TRUE)) {
+      tryCatch(
+        install.packages("mr.raps", repos = c("https://mrcieu.r-universe.dev", "https://cloud.r-project.org")),
+        error = function(e) {
+          if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes", repos = "https://cloud.r-project.org")
+          remotes::install_github("qingyuanzhao/mr.raps", force = TRUE)
+        }
+      )
+    }
+    if (!requireNamespace("TwoSampleMR", quietly = TRUE)) {
+      if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes", repos = "https://cloud.r-project.org")
+      remotes::install_github("MRCIEU/TwoSampleMR")
+    }
+    library(TwoSampleMR)
+
+    out_dir <- "D:/project/weiwei/research_results/results/mr_raps"
+    dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+    write.csv(dat, file.path(out_dir, "mr_raps_harmonized_data.csv"), row.names = FALSE)
+
+    mr_raps_res <- mr_raps(
+      b_exp = dat$beta.exposure,
+      b_out = dat$beta.outcome,
+      se_exp = dat$se.exposure,
+      se_out = dat$se.outcome,
+      parameters = default_parameters()
+    )
+
+    saveRDS(mr_raps_res, file.path(out_dir, "mr_raps_result.rds"))
+    result_table <- tryCatch(as.data.frame(mr_raps_res), error = function(e) data.frame(result = capture.output(print(mr_raps_res))))
+    write.csv(result_table, file.path(out_dir, "mr_raps_results.csv"), row.names = FALSE)

@@ -1,0 +1,158 @@
+gsmr2:
+  description: >
+    GSMR2 (Generalised Summary-data-based Mendelian Randomisation v2) uses GWAS summary
+    statistics and an LD reference panel to test causal associations with HEIDI-outlier filtering.
+  package: gsmr2
+  install:
+    github: |
+      install.packages("devtools", repos = "https://cloud.r-project.org")
+      devtools::install_github("JianYang-Lab/gsmr2", force = TRUE)
+  function: gsmr
+  input_format:
+    required_fields: [SNP, bzx, bzx_se, bzx_pval, bzy, bzy_se, bzy_pval, ldrho, snpid]
+  prepare_inputs:
+    LD_reference:
+      type: PLINK bfile
+      description: "A PLINK reference panel with .bed, .bim, and .fam files. Use the prefix without extension."
+    ldrho:
+      type: numeric matrix
+      description: "LD correlation matrix with rownames and colnames equal to the SNP IDs in the same order as the effect vectors."
+  params:
+    n_ref: 10000
+    gwas_thresh: 5e-8
+    nsnps_thresh: 10
+    heidi_outlier_flag: TRUE
+    single_snp_heidi_thresh: 0.01
+  output:
+    type: list
+    fields: [bxy, bxy_se, pval, nsnp, heidi_outliers]
+  common_errors:
+    - error_type: wrong_package_check
+      error_message: "The gsmr package is not installed"
+      cause: "The script loads gsmr2 but incorrectly checks requireNamespace('gsmr')."
+      repair_action: "Use library(gsmr2) and check exists('gsmr', mode='function') instead."
+    - error_type: plink_bfile_missing
+      error_message: "Failed to open *.bed"
+      cause: "The PLINK bfile path is wrong or one of .bed/.bim/.fam is missing."
+      repair_action: "Set plink_bfile to the correct prefix, e.g. D:/project/weiwei/MR-MAS/data/1000G_EUR/1000G_phase3_common_norel."
+    - error_type: duplicate_id_in_plink_reference
+      error_message: "Duplicate ID 'rs4001921'"
+      cause: "The LD reference .bim file contains duplicated SNP IDs."
+      repair_action: "Create a duplicate-free PLINK reference by excluding duplicated .bim IDs before clumping or LD calculation."
+    - error_type: ld_matrix_dimension_mismatch
+      error_message: "LD matrix dimension does not match the number of GSMR instruments"
+      cause: "Not all selected SNPs exist in the LD reference; PLINK keeps fewer SNPs than dat."
+      repair_action: "Read the subset .bim file after PLINK extraction and reorder/filter dat to the SNP order in the .bim file."
+    - error_type: unsupported_gsmr2_arguments
+      error_message: "参数没有用(snp_coeff_id, multi_snp_heidi_thresh, heidi_outlier_iter)"
+      cause: "The installed gsmr2 API expects snpid and does not support some old GSMR arguments."
+      repair_action: "Use snpid=dat$SNP and filter arguments with names(formals(gsmr)) before do.call()."
+    - error_type: missing_ld_matrix_names
+      error_message: "SNPs are missing in the LD correlation matrix"
+      cause: "ldrho has correct dimensions but lacks SNP rownames and colnames."
+      repair_action: "Set rownames(ldrho) <- dat$SNP and colnames(ldrho) <- dat$SNP."
+  example_code: |
+
+    library(data.table)
+    library(gsmr2)
+
+    exposure_file <- "D:/project/weiwei/research_results/raw_gwas_data/GCST90310294.h.tsv.gz"
+    outcome_file  <- "D:/project/weiwei/research_results/raw_gwas_data/GCST90132315.h.tsv.gz"
+    out_dir <- "D:/project/weiwei/research_results/results/gsmr"
+    dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+    plink_exe <- "plink"
+    plink_bfile_original <- "D:/project/weiwei/MR-MAS/data/1000G_EUR/1000G_phase3_common_norel"
+    plink_bfile <- plink_bfile_original
+    if (!all(c(file.exists(paste0(plink_bfile_original, ".bed")), file.exists(paste0(plink_bfile_original, ".bim")), file.exists(paste0(plink_bfile_original, ".fam"))))) {
+      stop("PLINK reference files are missing. The bfile prefix must have .bed/.bim/.fam files.")
+    }
+    if (!exists("gsmr", mode = "function")) stop("gsmr() not found after loading gsmr2.")
+
+    # Remove duplicate SNP IDs in the PLINK reference, otherwise PLINK clumping may fail.
+    bim <- fread(paste0(plink_bfile_original, ".bim"), header = FALSE)
+    dup_ref_snps <- unique(bim$V2[duplicated(bim$V2)])
+    if (length(dup_ref_snps) > 0) {
+      dup_file <- file.path(out_dir, "plink_duplicate_snps.txt")
+      fwrite(data.table(SNP = dup_ref_snps), dup_file, col.names = FALSE)
+      nodup_prefix <- file.path(out_dir, "1000G_phase3_common_norel_nodup")
+      status_nodup <- system2(plink_exe, args = c("--bfile", plink_bfile_original, "--exclude", dup_file, "--make-bed", "--out", nodup_prefix))
+      if (!identical(status_nodup, 0L)) stop("Failed to generate duplicate-free PLINK reference.")
+      plink_bfile <- nodup_prefix
+    }
+
+    exposure_data <- fread(exposure_file)
+    outcome_data <- fread(outcome_file)
+    exp <- exposure_data[, .(SNP = rsid, beta_exp = as.numeric(beta), se_exp = as.numeric(standard_error), ea_exp = toupper(as.character(effect_allele)), oa_exp = toupper(as.character(other_allele)), p_exp = as.numeric(p_value))]
+    out <- outcome_data[, .(SNP = rsid, beta_out = as.numeric(beta), se_out = as.numeric(standard_error), ea_out = toupper(as.character(effect_allele)), oa_out = toupper(as.character(other_allele)), p_out = as.numeric(p_value))]
+    exp <- exp[!is.na(SNP) & SNP != "" & !is.na(beta_exp) & !is.na(se_exp) & !is.na(ea_exp) & !is.na(oa_exp) & !is.na(p_exp) & se_exp > 0]
+    out <- out[!is.na(SNP) & SNP != "" & !is.na(beta_out) & !is.na(se_out) & !is.na(ea_out) & !is.na(oa_out) & !is.na(p_out) & se_out > 0]
+    exp <- exp[!duplicated(SNP)]
+    out <- out[!duplicated(SNP)]
+
+    gwas_thresh <- 5e-8
+    min_snps <- 10
+    max_gsmr_snps <- 500
+    clump_r2 <- 0.001
+    clump_kb <- 10000
+
+    inst <- exp[p_exp < gwas_thresh]
+    inst <- inst[!duplicated(SNP)]
+    if (nrow(inst) < min_snps) {
+      gwas_thresh <- 5e-6
+      inst <- exp[p_exp < gwas_thresh]
+      inst <- inst[!duplicated(SNP)]
+    }
+    if (nrow(inst) < min_snps) stop("Too few exposure instruments for GSMR.")
+
+    clump_input <- file.path(out_dir, "gsmr_clump_input.txt")
+    fwrite(inst[, .(SNP = SNP, P = p_exp)], clump_input, sep = "\t")
+    clump_prefix <- file.path(out_dir, "gsmr_clump")
+    plink_status <- system2(plink_exe, args = c("--bfile", plink_bfile, "--clump", clump_input, "--clump-p1", as.character(gwas_thresh), "--clump-p2", as.character(gwas_thresh), "--clump-r2", as.character(clump_r2), "--clump-kb", as.character(clump_kb), "--out", clump_prefix))
+    if (!identical(plink_status, 0L)) stop("PLINK clumping failed. Check the PLINK clumping log.")
+    clumped <- fread(paste0(clump_prefix, ".clumped"), fill = TRUE)
+    inst <- inst[SNP %in% clumped$SNP]
+    if (nrow(inst) < min_snps) stop("Too few independent instruments after clumping.")
+
+    dat <- merge(inst, out, by = "SNP")
+    is_palindromic <- function(a1, a2) (a1 == "A" & a2 == "T") | (a1 == "T" & a2 == "A") | (a1 == "C" & a2 == "G") | (a1 == "G" & a2 == "C")
+    dat <- dat[!is_palindromic(ea_exp, oa_exp)]
+    dat[, same_allele := ea_exp == ea_out & oa_exp == oa_out]
+    dat[, flip_allele := ea_exp == oa_out & oa_exp == ea_out]
+    dat <- dat[same_allele == TRUE | flip_allele == TRUE]
+    dat[flip_allele == TRUE, beta_out := -beta_out]
+    dat[, c("same_allele", "flip_allele") := NULL]
+    setorder(dat, p_exp)
+    if (nrow(dat) > max_gsmr_snps) dat <- dat[1:max_gsmr_snps]
+    if (nrow(dat) < min_snps) stop("Too few harmonized instruments for GSMR.")
+
+    # Generate LD matrix and align SNP order to PLINK BIM order.
+    extract_file <- file.path(out_dir, "gsmr_snps.txt")
+    fwrite(data.table(SNP = dat$SNP), extract_file, col.names = FALSE)
+    ld_subset_prefix <- file.path(out_dir, "gsmr_ld_subset")
+    plink_extract_status <- system2(plink_exe, args = c("--bfile", plink_bfile, "--extract", extract_file, "--make-bed", "--out", ld_subset_prefix))
+    if (!identical(plink_extract_status, 0L)) stop("PLINK SNP extraction failed.")
+    subset_bim <- fread(paste0(ld_subset_prefix, ".bim"), header = FALSE)
+    ld_snps <- subset_bim$V2
+    dat <- dat[SNP %in% ld_snps]
+    dat <- dat[match(ld_snps, SNP)]
+    if (nrow(dat) < min_snps) stop("Too few SNPs remained after matching with LD reference.")
+
+    extract_file_aligned <- file.path(out_dir, "gsmr_snps_aligned.txt")
+    fwrite(data.table(SNP = dat$SNP), extract_file_aligned, col.names = FALSE)
+    ld_prefix <- file.path(out_dir, "gsmr_ld")
+    plink_ld_status <- system2(plink_exe, args = c("--bfile", ld_subset_prefix, "--extract", extract_file_aligned, "--r", "square", "--out", ld_prefix))
+    if (!identical(plink_ld_status, 0L)) stop("PLINK LD matrix command failed.")
+    ldrho <- as.matrix(fread(paste0(ld_prefix, ".ld"), header = FALSE))
+    storage.mode(ldrho) <- "numeric"
+    if (nrow(ldrho) != nrow(dat) || ncol(ldrho) != nrow(dat)) stop("LD matrix dimension does not match GSMR instruments.")
+    rownames(ldrho) <- dat$SNP
+    colnames(ldrho) <- dat$SNP
+
+    gsmr_args <- list(bzx = dat$beta_exp, bzx_se = dat$se_exp, bzx_pval = dat$p_exp, bzy = dat$beta_out, bzy_se = dat$se_out, bzy_pval = dat$p_out, ldrho = ldrho, snpid = dat$SNP, n_ref = 10000, heidi_outlier_flag = TRUE, gwas_thresh = gwas_thresh, single_snp_heidi_thresh = 0.01, nsnps_thresh = min_snps)
+    gsmr_formals <- names(formals(gsmr))
+    gsmr_args <- gsmr_args[names(gsmr_args) %in% gsmr_formals]
+    gsmr_res <- do.call(gsmr, gsmr_args)
+    saveRDS(gsmr_res, file.path(out_dir, "gsmr_result.rds"))
+    write.csv(dat, file.path(out_dir, "gsmr_harmonized_instruments_final.csv"), row.names = FALSE)
+

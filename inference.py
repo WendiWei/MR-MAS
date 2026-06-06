@@ -114,13 +114,41 @@ def query_model(model_str, prompt, system_prompt, openai_api_key=None, gemini_ap
                             model=f"{model_str}",  # engine = "deployment_name".
                             messages=messages, temperature=temp)
                 else:
-                    client = OpenAI(base_url="https://api.claudeshop.top/v1")
+                    # client = OpenAI(base_url="https://api.claudeshop.top/v1")
+                    client = OpenAI(base_url="https://api.ysaikeji.cn/v1")
                     if temp is None:
                         completion = client.chat.completions.create(
-                            model="gpt-4o-2024-08-06", messages=messages, )
+                            model="gpt-4o", messages=messages, )
                     else:
                         completion = client.chat.completions.create(
-                            model="gpt-4o-2024-08-06", messages=messages, temperature=temp)
+                            model="gpt-4o", messages=messages, temperature=temp)
+                answer = completion.choices[0].message.content
+
+            elif model_str == "gpt-5.4" or model_str == "gpt5.4":
+                model_str = "gpt-5.4"
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}]
+                if version == "0.28":
+                    if temp is None:
+                        completion = openai.ChatCompletion.create(
+                            model=f"{model_str}",  # engine = "deployment_name".
+                            messages=messages
+                        )
+                    else:
+                        completion = openai.ChatCompletion.create(
+                            model=f"{model_str}",  # engine = "deployment_name".
+                            messages=messages, temperature=temp)
+                else:
+                    # client = OpenAI(base_url="https://api.claudeshop.top/v1")
+                    client = OpenAI(base_url="https://api.ysaikeji.cn/v1")
+
+                    if temp is None:
+                        completion = client.chat.completions.create(
+                            model="gpt-5.4", messages=messages, )
+                    else:
+                        completion = client.chat.completions.create(
+                            model="gpt-5.4", messages=messages, temperature=temp)
                 answer = completion.choices[0].message.content
 
             elif model_str == "gpt-3.5-turbo":
@@ -148,8 +176,8 @@ def query_model(model_str, prompt, system_prompt, openai_api_key=None, gemini_ap
                             model="gpt-3.5-turbo", messages=messages, temperature=temp)
                 answer = completion.choices[0].message.content
 
-            elif model_str == "deepseek-chat-chat":
-                model_str = "deepseek-chat-chat"
+            elif model_str == "deepseek-chat":
+                model_str = "deepseek-chat"
                 messages = [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}]
@@ -162,11 +190,11 @@ def query_model(model_str, prompt, system_prompt, openai_api_key=None, gemini_ap
                     )
                     if temp is None:
                         completion = deepseek_client.chat.completions.create(
-                            model="deepseek-chat-chat",
+                            model="deepseek-chat",
                             messages=messages)
                     else:
                         completion = deepseek_client.chat.completions.create(
-                            model="deepseek-chat-chat",
+                            model="deepseek-chat",
                             messages=messages,
                             temperature=temp)
                 answer = completion.choices[0].message.content
@@ -202,9 +230,9 @@ def query_model(model_str, prompt, system_prompt, openai_api_key=None, gemini_ap
                         model=f"{model_str}",  # engine = "deployment_name".
                         messages=messages)
                 else:
-                    client = OpenAI(base_url="https://api.claudeshop.top/v1")
+                    client = OpenAI(base_url="https://api.ysaikeji.cn/v1")
                     completion = client.chat.completions.create(
-                        model="o1-mini-2024-09-12", messages=messages)
+                        model="o1-mini", messages=messages)
                 answer = completion.choices[0].message.content
             elif model_str == "o1":
                 model_str = "o1"
@@ -215,7 +243,7 @@ def query_model(model_str, prompt, system_prompt, openai_api_key=None, gemini_ap
                         model="o1-2024-12-17",  # engine = "deployment_name".
                         messages=messages)
                 else:
-                    client = OpenAI(base_url="https://api.claudeshop.top/v1")
+                    client = OpenAI(base_url="https://api.ysaikeji.cn/v1")
                     completion = client.chat.completions.create(
                         model="o1-2024-12-17", messages=messages)
                 answer = completion.choices[0].message.content
@@ -267,7 +295,7 @@ def query_model(model_str, prompt, system_prompt, openai_api_key=None, gemini_ap
             try:
                 if model_str in ["o1-preview", "o1-mini", "claude-3.5-sonnet", "o1", "o3-mini"]:
                     encoding = tiktoken.encoding_for_model("gpt-4o")
-                elif model_str in ["gpt-4o","deepseek-chat-chat", "gpt-oss:20b","gpt-5-mini","deepseek-chat-r1"]:
+                elif model_str in ["gpt-4o","deepseek-chat", "gpt-oss:20b","gpt-5-mini","deepseek-chat-r1"]:
                     encoding = tiktoken.get_encoding("cl100k_base")
                 else:
                     encoding = tiktoken.encoding_for_model(model_str)
@@ -344,4 +372,3 @@ def curr_cost_est():
     return sum([costmap_in[_]*TOKENS_IN[_] for _ in TOKENS_IN]) + sum([costmap_out[_]*TOKENS_OUT[_] for _ in TOKENS_OUT])
 
 
-#print(query_model(model_str="o1-mini", prompt="hi", system_prompt="hey"))

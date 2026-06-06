@@ -1,0 +1,137 @@
+MRMix:
+  description: MRMix is a robust Mendelian randomization method that uses a mixture model to account for invalid instruments
+    and horizontal pleiotropy.
+  package: MRMix
+  function: MRMix
+  input_format:
+    required_fields:
+    - SNP
+    - beta.exposure
+    - se.exposure
+    - beta.outcome
+    - se.outcome
+    - effect_allele.exposure
+    - other_allele.exposure
+    - effect_allele.outcome
+    - other_allele.outcome
+  prepare_inputs:
+    harmonised_data:
+      type: data.frame
+      description: Harmonized SNP-level summary statistics. Remove duplicated SNPs, remove palindromic SNPs, align alleles,
+        and flip beta.outcome when outcome alleles are reversed.
+  install:
+    github: devtools::install_github("gqi/MRMix")
+  output:
+    type: MRMix result object
+  common_errors:
+  - error_type: unused_argument
+    error_message: unused argument / 参数没有用
+    cause: Different MRMix versions may use different parameter names.
+    repair_action: Filter arguments by names(formals(MRMix)) before do.call().
+  - error_type: package_install_failed
+    error_message: Failed to install MRMix from GitHub
+    cause: GitHub/network/Rtools issue.
+    repair_action: Install devtools/remotes and Rtools if needed, then use devtools::install_github("gqi/MRMix", force=TRUE).
+  - error_type: too_many_snps
+    error_message: MRMix is slow or unstable with too many SNPs
+    cause: Large number of instruments can slow robust mixture estimation.
+    repair_action: Limit to top SNPs by exposure p-value or LD-clump before MRMix.
+  example_code: |-
+    library(data.table)
+
+    exposure_file <- "D:/project/weiwei/research_results/raw_gwas_data/GCST90310294.h.tsv.gz"
+    outcome_file  <- "D:/project/weiwei/research_results/raw_gwas_data/GCST90132315.h.tsv.gz"
+
+    exposure_data <- fread(exposure_file)
+    outcome_data  <- fread(outcome_file)
+
+    exp <- exposure_data[, .(
+      SNP = rsid,
+      beta.exposure = as.numeric(beta),
+      se.exposure = as.numeric(standard_error),
+      effect_allele.exposure = toupper(as.character(effect_allele)),
+      other_allele.exposure = toupper(as.character(other_allele)),
+      eaf.exposure = as.numeric(effect_allele_frequency),
+      pval.exposure = as.numeric(p_value),
+      samplesize.exposure = as.numeric(n)
+    )]
+
+    out <- outcome_data[, .(
+      SNP = rsid,
+      beta.outcome = as.numeric(beta),
+      se.outcome = as.numeric(standard_error),
+      effect_allele.outcome = toupper(as.character(effect_allele)),
+      other_allele.outcome = toupper(as.character(other_allele)),
+      eaf.outcome = as.numeric(effect_allele_frequency),
+      pval.outcome = as.numeric(p_value),
+      samplesize.outcome = as.numeric(n)
+    )]
+
+    exp <- exp[!is.na(SNP) & SNP != "" & !is.na(beta.exposure) & !is.na(se.exposure) &
+                 !is.na(effect_allele.exposure) & !is.na(other_allele.exposure) &
+                 !is.na(pval.exposure) & se.exposure > 0]
+    out <- out[!is.na(SNP) & SNP != "" & !is.na(beta.outcome) & !is.na(se.outcome) &
+                 !is.na(effect_allele.outcome) & !is.na(other_allele.outcome) &
+                 !is.na(pval.outcome) & se.outcome > 0]
+
+    exp <- exp[!duplicated(SNP)]
+    out <- out[!duplicated(SNP)]
+
+    gwas_thresh <- 5e-8
+    min_snps <- 3
+    max_snps <- 500
+
+    inst <- exp[pval.exposure < gwas_thresh]
+    inst <- inst[!duplicated(SNP)]
+
+    if (nrow(inst) < min_snps) {
+      warning("Too few genome-wide significant SNPs. Relaxing threshold to 5e-6.")
+      gwas_thresh <- 5e-6
+      inst <- exp[pval.exposure < gwas_thresh]
+      inst <- inst[!duplicated(SNP)]
+    }
+    if (nrow(inst) < min_snps) stop("Too few exposure instruments.")
+
+    dat <- merge(inst, out, by = "SNP")
+    if (nrow(dat) < min_snps) stop("Too few overlapping SNPs between exposure and outcome.")
+
+    is_palindromic <- function(a1, a2) {
+      (a1 == "A" & a2 == "T") | (a1 == "T" & a2 == "A") |
+        (a1 == "C" & a2 == "G") | (a1 == "G" & a2 == "C")
+    }
+
+    dat <- dat[!is_palindromic(effect_allele.exposure, other_allele.exposure)]
+    dat[, same_allele := effect_allele.exposure == effect_allele.outcome &
+          other_allele.exposure == other_allele.outcome]
+    dat[, flip_allele := effect_allele.exposure == other_allele.outcome &
+          other_allele.exposure == effect_allele.outcome]
+    dat <- dat[same_allele == TRUE | flip_allele == TRUE]
+    dat[flip_allele == TRUE, beta.outcome := -beta.outcome]
+    dat[, c("same_allele", "flip_allele") := NULL]
+    setorder(dat, pval.exposure)
+    if (nrow(dat) > max_snps) dat <- dat[1:max_snps]
+    if (nrow(dat) < min_snps) stop("Too few harmonized SNPs.")if (!requireNamespace("MRMix", quietly = TRUE)) {
+      if (!requireNamespace("devtools", quietly = TRUE)) install.packages("devtools", repos = "https://cloud.r-project.org")
+      devtools::install_github("gqi/MRMix")
+    }
+    library(MRMix)
+
+    out_dir <- "D:/project/weiwei/research_results/results/mrmix"
+    dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+    write.csv(dat, file.path(out_dir, "mrmix_harmonized_data.csv"), row.names = FALSE)
+
+    mrmix_args <- list(
+      betahat_x = dat$beta.exposure,
+      betahat_y = dat$beta.outcome,
+      sx = dat$se.exposure,
+      sy = dat$se.outcome,
+      pval_x = dat$pval.exposure,
+      pval_y = dat$pval.outcome
+    )
+    mrmix_formals <- names(formals(MRMix))
+    mrmix_args <- mrmix_args[names(mrmix_args) %in% mrmix_formals]
+
+    mrmix_res <- do.call(MRMix, mrmix_args)
+    saveRDS(mrmix_res, file.path(out_dir, "mrmix_result.rds"))
+    result_table <- tryCatch(as.data.frame(mrmix_res), error = function(e) data.frame(result = capture.output(print(mrmix_res))))
+    write.csv(result_table, file.path(out_dir, "mrmix_results.csv"), row.names = FALSE)

@@ -1,0 +1,56 @@
+WeightedMedian:
+  description: >
+    The weighted median estimator provides a causal estimate that is robust even when up to 50% of the genetic variants are invalid instruments.
+    It does not assume the absence of horizontal pleiotropy.
+  method_type: traditional
+  recommended: true
+  package: TwoSampleMR
+  function: mr
+
+  input_format:
+    required_fields:
+      - SNP
+      - beta.exposure
+      - se.exposure
+      - beta.outcome
+      - se.outcome
+      - effect_allele.exposure
+      - effect_allele.outcome
+      - other_allele.exposure
+      - other_allele.outcome
+
+  prepare_inputs:
+    harmonised_data:
+      type: data.frame
+      description: >
+        A harmonized dataset of exposure and outcome summary statistics.
+        Generated using harmonise_data().
+      construction: |
+        harmonised_data <- harmonise_data(exposure_data, outcome_data)
+
+  params:
+    method_list: ["mr_weighted_median"]
+
+  output:
+    type: data.frame
+    fields:
+      - method
+      - b
+      - se
+      - pval
+
+  example_code: |
+    # Step 1: Extract exposure data (example)
+    exposure_data_path <- "D:\\pycharm_projects\\AgentLaboratory\\AgentLaboratory\\research_results\\processed_data\\filtered_exposure_data.csv"
+    exposure_data <- read_csv(exposure_data_path)
+
+
+    # Step 2: Extract outcome data
+    outcome_data_path  <- "D:\\pycharm_projects\\AgentLaboratory\\AgentLaboratory\\research_results\\processed_data\\filtered_outcome_data.csv"
+    outcome_data  <- read_csv(outcome_data_path)
+
+    # Step 3: Harmonize the datasets
+    harmonised_data <- harmonise_data(exposure_data, outcome_data)
+    
+    # Step 4: Perform MR using the mr_weighted_median method
+    mr_result <- mr(harmonised_data, method_list = c("mr_weighted_median"))

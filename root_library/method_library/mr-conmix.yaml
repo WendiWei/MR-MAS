@@ -1,0 +1,159 @@
+MRConMix:
+  description: MR-ConMix is a robust Mendelian randomization method implemented in the MendelianRandomization R package. It
+    estimates the causal effect by modelling SNP-specific ratio estimates as a mixture of valid and invalid instruments.
+  package: MendelianRandomization
+  function: mr_conmix
+  input_format:
+    required_fields:
+    - SNP
+    - beta.exposure
+    - se.exposure
+    - beta.outcome
+    - se.outcome
+    - effect_allele.exposure
+    - other_allele.exposure
+    - effect_allele.outcome
+    - other_allele.outcome
+  prepare_inputs:
+    harmonised_data:
+      type: data.frame
+      description: Harmonized SNP-level summary statistics. Remove duplicated SNPs, remove palindromic SNPs, align alleles,
+        and flip beta.outcome when outcome alleles are reversed.
+  params:
+    psi: 0
+    alpha: 0.05
+    CIStep: 0.01
+  output:
+    type: MRConMix object
+    fields:
+    - Estimate
+    - CILower
+    - CIUpper
+    - Pvalue
+    - Valid
+  common_errors:
+  - error_type: yaml_example_code_not_literal_block
+    error_message: yaml.parser.ParserError while parsing mr-conmix.yaml
+    cause: R code in example_code was not fully indented under a YAML literal block.
+    repair_action: 'Store all R code under example_code: | and keep every code line indented consistently.'
+  - error_type: too_many_snps_slow_grid_search
+    error_message: mr_conmix runs very slowly or appears to hang
+    cause: The contamination mixture confidence interval is grid-search based; too many SNPs can be slow.
+    repair_action: Sort by exposure p-value and keep a manageable number of instruments, e.g. max_snps = 200-500.
+  - error_type: missing_or_unaligned_alleles
+    error_message: unexpected result or too few harmonized SNPs
+    cause: Exposure and outcome alleles were not aligned before constructing MRInput.
+    repair_action: Remove palindromic SNPs and flip beta.outcome when exposure and outcome alleles are reversed.
+  example_code: |-
+    library(data.table)
+
+    exposure_file <- "D:/project/weiwei/research_results/raw_gwas_data/GCST90310294.h.tsv.gz"
+    outcome_file  <- "D:/project/weiwei/research_results/raw_gwas_data/GCST90132315.h.tsv.gz"
+
+    exposure_data <- fread(exposure_file)
+    outcome_data  <- fread(outcome_file)
+
+    exp <- exposure_data[, .(
+      SNP = rsid,
+      beta.exposure = as.numeric(beta),
+      se.exposure = as.numeric(standard_error),
+      effect_allele.exposure = toupper(as.character(effect_allele)),
+      other_allele.exposure = toupper(as.character(other_allele)),
+      eaf.exposure = as.numeric(effect_allele_frequency),
+      pval.exposure = as.numeric(p_value),
+      samplesize.exposure = as.numeric(n)
+    )]
+
+    out <- outcome_data[, .(
+      SNP = rsid,
+      beta.outcome = as.numeric(beta),
+      se.outcome = as.numeric(standard_error),
+      effect_allele.outcome = toupper(as.character(effect_allele)),
+      other_allele.outcome = toupper(as.character(other_allele)),
+      eaf.outcome = as.numeric(effect_allele_frequency),
+      pval.outcome = as.numeric(p_value),
+      samplesize.outcome = as.numeric(n)
+    )]
+
+    exp <- exp[!is.na(SNP) & SNP != "" & !is.na(beta.exposure) & !is.na(se.exposure) &
+                 !is.na(effect_allele.exposure) & !is.na(other_allele.exposure) &
+                 !is.na(pval.exposure) & se.exposure > 0]
+    out <- out[!is.na(SNP) & SNP != "" & !is.na(beta.outcome) & !is.na(se.outcome) &
+                 !is.na(effect_allele.outcome) & !is.na(other_allele.outcome) &
+                 !is.na(pval.outcome) & se.outcome > 0]
+
+    exp <- exp[!duplicated(SNP)]
+    out <- out[!duplicated(SNP)]
+
+    gwas_thresh <- 5e-8
+    min_snps <- 3
+    max_snps <- 500
+
+    inst <- exp[pval.exposure < gwas_thresh]
+    inst <- inst[!duplicated(SNP)]
+
+    if (nrow(inst) < min_snps) {
+      warning("Too few genome-wide significant SNPs. Relaxing threshold to 5e-6.")
+      gwas_thresh <- 5e-6
+      inst <- exp[pval.exposure < gwas_thresh]
+      inst <- inst[!duplicated(SNP)]
+    }
+    if (nrow(inst) < min_snps) stop("Too few exposure instruments.")
+
+    dat <- merge(inst, out, by = "SNP")
+    if (nrow(dat) < min_snps) stop("Too few overlapping SNPs between exposure and outcome.")
+
+    is_palindromic <- function(a1, a2) {
+      (a1 == "A" & a2 == "T") | (a1 == "T" & a2 == "A") |
+        (a1 == "C" & a2 == "G") | (a1 == "G" & a2 == "C")
+    }
+
+    dat <- dat[!is_palindromic(effect_allele.exposure, other_allele.exposure)]
+    dat[, same_allele := effect_allele.exposure == effect_allele.outcome &
+          other_allele.exposure == other_allele.outcome]
+    dat[, flip_allele := effect_allele.exposure == other_allele.outcome &
+          other_allele.exposure == effect_allele.outcome]
+    dat <- dat[same_allele == TRUE | flip_allele == TRUE]
+    dat[flip_allele == TRUE, beta.outcome := -beta.outcome]
+    dat[, c("same_allele", "flip_allele") := NULL]
+    setorder(dat, pval.exposure)
+    if (nrow(dat) > max_snps) dat <- dat[1:max_snps]
+    if (nrow(dat) < min_snps) stop("Too few harmonized SNPs.")if (!requireNamespace("MendelianRandomization", quietly = TRUE)) {
+      install.packages("MendelianRandomization", repos = "https://cloud.r-project.org")
+    }
+    library(MendelianRandomization)
+
+    out_dir <- "D:/project/weiwei/research_results/results/mr_conmix"
+    dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+    write.csv(dat, file.path(out_dir, "mr_conmix_harmonized_data.csv"), row.names = FALSE)
+
+    mr_input_obj <- mr_input(
+      bx = dat$beta.exposure,
+      bxse = dat$se.exposure,
+      by = dat$beta.outcome,
+      byse = dat$se.outcome,
+      snps = dat$SNP,
+      exposure = "Exposure",
+      outcome = "Outcome"
+    )
+
+    conmix_res <- mr_conmix(
+      object = mr_input_obj,
+      psi = 0,
+      CIMin = NA,
+      CIMax = NA,
+      CIStep = 0.01,
+      alpha = 0.05
+    )
+
+    saveRDS(conmix_res, file.path(out_dir, "mr_conmix_result.rds"))
+    result_table <- data.frame(
+      method = "MR-ConMix",
+      nsnp = nrow(dat),
+      estimate = conmix_res@Estimate,
+      ci_lower = paste(conmix_res@CILower, collapse = ";"),
+      ci_upper = paste(conmix_res@CIUpper, collapse = ";"),
+      p_value = conmix_res@Pvalue,
+      valid = conmix_res@Valid
+    )
+    write.csv(result_table, file.path(out_dir, "mr_conmix_results.csv"), row.names = FALSE)

@@ -1,164 +1,207 @@
-# MR-MAS
+# Agent Laboratory: Using LLM Agents as Research Assistants
 
-**MR-MAS: An End-to-End Multi-Agent System for Autonomous Mendelian Randomization Analysis**
 
-MR-MAS is an end-to-end multi-agent framework for automated Mendelian Randomization (MR) analysis. It coordinates multiple large language model (LLM)-driven agents with external biomedical resources, local statistical computing tools, and a structured MR Knowledge Base (MRKB) to support scalable, standardized, and reproducible MR research.
+<p align="center">
+  <img src="media/AgentLabLogo.png" alt="Demonstration of the flow of AgentClinic" style="width: 99%;">
+</p>
 
-![MR-MAS Framework](media/Framework.png)
+<p align="center">
+    【English | <a href="readme/README-chinese.md">中文</a> | <a href="readme/README-japanese.md">日本語</a> | <a href="readme/README-korean.md">한국어</a> | <a href="readme/README-filipino.md">Filipino</a> | <a href="readme/README-french.md">Français</a> | <a href="readme/README-slovak.md">Slovenčina</a> | <a href="readme/README-portugese.md">Português</a> | <a href="readme/README-spanish.md">Español</a> | <a href="readme/README-turkish.md">Türkçe</a> | <a href="readme/README-hindi.md">हिंदी</a> | <a href="readme/README-bengali.md">বাংলা</a> | <a href="readme/README-vietnamese.md">Tiếng Việt</a> | <a href="readme/README-russian.md">Русский</a> | <a href="readme/README-arabic.md">العربية</a> | <a href="readme/README-farsi.md">فارسی</a> | <a href="readme/README-italian.md">Italiano</a>】
+</p>
 
-## Overview
+<p align="center">
+    【📝 <a href="https://arxiv.org/pdf/2501.04227">Paper</a> | 🌐 <a href="https://MR-MAS.github.io/">Website</a> | 🌐 <a href="https://agentrxiv.github.io/">AgentRxiv Website</a> | 💻 <a href="https://github.com/SamuelSchmidgall/MR-MAS">Software</a> | 📰 <a href="https://MR-MAS.github.io/#citation-ref">Citation</a>】
+</p>
 
-Mendelian Randomization is widely used for causal inference in biomedical research, but practical MR workflows often remain fragmented. A complete MR analysis usually requires GWAS data retrieval, instrumental variable selection, allele harmonization, causal effect estimation, sensitivity analysis, result interpretation, and manuscript preparation.
+### News 
+* [March/24/2025] 🎉 🎊 🎉 Now introducing **AgentRxiv**, a framework where autonomous research agents can upload, retrieve, and build on each other’s research. This allows agents to make cumulative progress on their research.
 
-MR-MAS aims to reduce this workflow burden by organizing the full MR research process into a coordinated multi-agent pipeline. Given a user-defined exposure–outcome research objective, the system automatically performs research planning, GWAS data acquisition and preprocessing, MR analysis execution, result interpretation, scientific manuscript drafting, and paper review.
+## 📖 Overview
 
-The system generates traceable research artifacts, including standardized GWAS datasets, executable R analysis scripts, MR statistical outputs, figures, interpretation reports, and manuscript drafts. All automatically generated results should be reviewed and validated by human researchers before being used as publication-level scientific evidence.
+- **Agent Laboratory** is an end-to-end autonomous research workflow meant to assist **you** as the human researcher toward **implementing your research ideas**. Agent Laboratory consists of specialized agents driven by large language models to support you through the entire research workflow—from conducting literature reviews and formulating plans to executing experiments and writing comprehensive reports. 
+- This system is not designed to replace your creativity but to complement it, enabling you to focus on ideation and critical thinking while automating repetitive and time-intensive tasks like coding and documentation. By accommodating varying levels of computational resources and human involvement, Agent Laboratory aims to accelerate scientific discovery and optimize your research productivity.
+<p align="center">
+  <img src="media/AgentLab.png" alt="Demonstration of the flow of AgentClinic" style="width: 99%;">
+</p>
 
-## Key Features
+- Agent Laboratory also supports **AgentRxiv**, a framework where autonomous research agents can upload, retrieve, and build on each other’s research. This allows agents to make cumulative progress on their research.
 
-- **End-to-end MR automation**: Supports the complete workflow from research planning to manuscript drafting and review.
-- **Multi-agent collaboration**: Coordinates role-specialized LLM agents, including Biological Engineer, Statistical Geneticist, Data Analyst, Algorithm Engineer, Writing Specialist, and Reviewer.
-- **GWAS data preparation**: Retrieves and processes GWAS summary statistics from the GWAS Catalog.
-- **TraitMatcher module**: Normalizes noisy, synonymous, misspelled, measurement-related, and multilingual trait queries for robust GWAS trait retrieval.
-- **Local MR execution**: Generates and executes R scripts for MR analysis, sensitivity analysis, and result visualization.
-- **MR Knowledge Base (MRKB)**: Uses structured YAML specifications of MR methods and R packages to support method-aware code repair.
-- **Validation and repair mechanism**: Detects incomplete outputs or runtime errors and triggers proceed, retry, repair, or stop actions.
-- **Reproducible artifacts**: Archives intermediate datasets, scripts, logs, statistical outputs, figures, and manuscript drafts.
+<p align="center">
+  <img src="media/agentrxiv.png" alt="Demonstration of the flow of AgentClinic" style="width: 99%;">
+</p>
 
-## System Design
 
-MR-MAS follows a stage-based workflow corresponding to six major phases.
+### 🔬 How does Agent Laboratory work?
 
-![MR-MAS Workflow](media/Workflow.png)
+- Agent Laboratory consists of three primary phases that systematically guide the research process: (1) Literature Review, (2) Experimentation, and (3) Report Writing. During each phase, specialized agents driven by LLMs collaborate to accomplish distinct objectives, integrating external tools like arXiv, Hugging Face, Python, and LaTeX to optimize outcomes. This structured workflow begins with the independent collection and analysis of relevant research papers, progresses through collaborative planning and data preparation, and results in automated experimentation and comprehensive report generation. Details on specific agent roles and their contributions across these phases are discussed in the paper.
 
-### 1. Research Plan Formulation
+<p align="center">
+  <img src="media/AgentLabWF.png" alt="Demonstration of the flow of AgentClinic" style="width: 99%;">
+</p>
 
-The Biological Engineer and Statistical Geneticist agents refine the user-defined research objective into an executable MR analysis plan. This plan includes exposure and outcome definitions, GWAS search terms, instrumental variable criteria, MR method selection, and sensitivity analysis design.
 
-### 2. GWAS Data Acquisition and Preprocessing
+### 👾 Currently supported models
 
-The Data Analyst and Algorithm Engineer agents retrieve GWAS summary statistics, select suitable datasets, and perform instrumental variable filtering, LD clumping, weak instrument removal, and allele harmonization.
+* **OpenAI**: o1, o1-preview, o1-mini, gpt-4o, o3-mini
+* **DeepSeek**: deepseek-chat (deepseek-v3)
 
-### 3. MR Analysis Execution
+To select a specific llm set the flag `--llm-backend="llm_model"` for example `--llm-backend="gpt-4o"` or `--llm-backend="deepseek-chat"`. Please feel free to add a PR supporting new models according to your need!
 
-The Algorithm Engineer generates executable R scripts for causal effect estimation, sensitivity analyses, and result visualization. The system runs the scripts locally and checks for syntax or runtime errors.
+## 🖥️ Installation
 
-### 4. Results Interpretation
+### Python venv option
 
-The Statistical Geneticist and Biological Engineer agents evaluate MR estimates, p-values, effect directions, heterogeneity, pleiotropy, and consistency across methods to produce a structured interpretation.
+* We recommend using python 3.12
 
-### 5. Scientific Manuscript Generation
+1. **Clone the GitHub Repository**: Begin by cloning the repository using the command:
+```bash
+git clone git@github.com:SamuelSchmidgall/MR-MAS.git
+```
 
-The Writing Specialist agent converts the analysis outputs into a structured scientific manuscript draft using a LaTeX framework. The system also retrieves relevant literature from PubMed and PubMed Central to support the writing of the research background, related work, and result interpretation sections.
+2. **Set up and Activate Python Environment**
+```bash
+python -m venv venv_agent_lab
+```
+- Now activate this environment:
+```bash
+source venv_agent_lab/bin/activate
+```
 
-### 6. Paper Review
+3. **Install required libraries**
+```bash
+pip install -r requirements.txt
+```
 
-Reviewer agents assess the manuscript draft from multiple perspectives, including methodological rigor, clarity of presentation, novelty, and scientific significance. The system may terminate the workflow or return to earlier stages for targeted revision.
+4. **Install pdflatex [OPTIONAL]**
+```bash
+sudo apt install pdflatex
+```
+- This enables latex source to be compiled by the agents.
+- **[IMPORTANT]** If this step cannot be run due to not having sudo access, pdf compiling can be turned off via running Agent Laboratory via setting the `--compile-latex` flag to false: `--compile-latex "false"`
 
-## Core Components
 
-MR-MAS consists of five core components.
 
-### 1. Role-Specialized Agents
+5. **Now run Agent Laboratory!**
 
-The system uses multiple LLM-driven agents with explicit responsibilities:
+`python ai_lab_repo.py --yaml-location "experiment_configs/MATH_agentlab.yaml"`
 
-- **Biological Engineer**: Provides biomedical background and supports causal interpretation.
-- **Statistical Geneticist**: Designs MR strategies and evaluates statistical validity.
-- **Data Analyst**: Retrieves GWAS datasets and manages data selection.
-- **Algorithm Engineer**: Generates, executes, and repairs analysis scripts.
-- **Writing Specialist**: Drafts scientific manuscripts and integrates analysis outputs.
-- **Reviewer**: Reviews manuscript drafts and provides revision feedback.
 
-### 2. Shared Memory
+### Co-Pilot mode
 
-The shared memory module preserves contextual continuity across workflow stages.
+To run Agent Laboratory in copilot mode, simply set the copilot-mode flag in your yaml config to `"true"`
 
-- **Long-term memory** stores validated artifacts, including the research objective, analysis plan, harmonized GWAS datasets, final scripts, execution logs, MR results, and manuscript drafts.
-- **Short-term memory** stores temporary stage-level information, including draft outputs, failed code, runtime errors, repair history, intermediate messages, and retrieved MRKB entries.
+-----
+## Tips for better research outcomes
 
-### 3. Tool Pool
 
-The tool pool provides access to external resources and local computing environments, including:
+#### [Tip #1] 📝 Make sure to write extensive notes! 📝
 
-- GWAS Catalog retrieval
-- PubMed and PubMed Central literature retrieval
-- Local R script execution
-- LaTeX manuscript compilation
+**Writing extensive notes is important** for helping your agent understand what you're looking to accomplish in your project, as well as any style preferences. Notes can include any experiments you want the agents to perform, providing API keys, certain plots or figures you want included, or anything you want the agent to know when performing research.
 
-### 4. MR Knowledge Base
+This is also your opportunity to let the agent know **what compute resources it has access to**, e.g. GPUs (how many, what type of GPU, how many GBs), CPUs (how many cores, what type of CPUs), storage limitations, and hardware specs.
 
-The MR Knowledge Base (MRKB) is a structured YAML-based knowledge base for organizing MR methodological and computational resources. It contains two main components:
+In order to add notes, you must modify the task_notes_LLM structure inside of `ai_lab_repo.py`. Provided below is an example set of notes used for some of our experiments. 
 
-- **MR Method Library**: Records method-level specifications, including method descriptions, input requirements, parameters, output fields, assumptions, and example code.
-- **R Package Library**: Records package- and function-level information for MR-related R packages, including core functions, arguments, return objects, and usage examples.
 
-MRKB supports error-driven code diagnosis and targeted repair during MR analysis execution.
+```
+task-notes:
+  plan-formulation:
+    - 'You should come up with a plan for only ONE experiment aimed at maximizing performance on the test set of MATH using prompting techniques.'
+    - 'Please use gpt-4o-mini for your experiments'
+    - 'You must evaluate on the entire 500 test questions of MATH'
+  data-preparation:
+    - 'Please use gpt-4o-mini for your experiments'
+    - 'You must evaluate on the entire 500 test questions of MATH'
+    - 'Here is a sample code you can use to load MATH\nfrom datasets import load_dataset\nMATH_test_set = load_dataset("HuggingFaceH4/MATH-500")["test"]'
+...
+```
 
-### 5. Validation and Repair Mechanism
+--------
 
-MR-MAS supports both automatic and human-in-the-loop execution modes. In automatic mode, the system proceeds through the predefined workflow after receiving the initial MR research objective. In human-in-the-loop mode, checkpoints are introduced after key stages, allowing users to inspect intermediate outputs and decide whether to proceed, rerun, or stop the current workflow.
+#### [Tip #2] 🚀 Using more powerful models generally leads to better research 🚀
 
-MR-MAS supports four stage-level actions:
+When conducting research, **the choice of model can significantly impact the quality of results**. More powerful models tend to have higher accuracy, better reasoning capabilities, and better report generation. If computational resources allow, prioritize the use of advanced models such as o1-(mini/preview) or similar state-of-the-art large language models.
 
-- **Proceed**: Move to the next stage when the output is complete and valid.
-- **Retry**: Rerun the current stage when the output is incomplete or requires adjustment.
-- **Repair**: Trigger MRKB-guided code repair when script execution fails.
-- **Stop**: Terminate the workflow when critical inputs are missing or the error cannot be recovered.
+However, **it’s important to balance performance and cost-effectiveness**. While powerful models may yield better results, they are often more expensive and time-consuming to run. Consider using them selectively—for instance, for key experiments or final analyses—while relying on smaller, more efficient models for iterative tasks or initial prototyping.
 
-During repair, failed code, error messages, and execution logs are stored in short-term memory. MR-MAS then retrieves relevant MRKB entries and uses them to guide targeted code regeneration.
+When resources are limited, **optimize by fine-tuning smaller models** on your specific dataset or combining pre-trained models with task-specific prompts to achieve the desired balance between performance and computational efficiency.
 
+-----
 
-## TraitMatcher
+#### [Tip #3] ✅ You can load previous saves from checkpoints ✅
 
-TraitMatcher is designed to improve GWAS trait retrieval under noisy input settings. It standardizes user-provided trait expressions and ranks candidate GWAS Catalog traits using lexical and semantic similarity.
+**If you lose progress, internet connection, or if a subtask fails, you can always load from a previous state.** All of your progress is saved by default in the `state_saves` variable, which stores each individual checkpoint. 
 
-The benchmark dataset for TraitMatcher evaluation is provided in:
+-----
 
-`data/trait_queries.xlsx`
 
-This dataset contains 168 queries constructed from 24 target traits, with seven query variants per trait. The query variants cover:
+#### [Tip #4] 🈯 If you are running in a language other than English 🈲
 
-- Standard trait expressions
-- Synonyms
-- Misspellings
-- Measurement-related expressions
-- Chinese expressions
+If you are running Agent Laboratory in a language other than English, no problem, just make sure to provide a language flag to the agents to perform research in your preferred language. Note that we have not extensively studied running Agent Laboratory in other languages, so be sure to report any problems you encounter.
 
-No additional external datasets are required for this experiment.
+For example, if you are running in Chinese set the language in the yaml:
 
-## Experimental Evaluation
+`language:  "中文"`
 
-MR-MAS was evaluated from multiple perspectives:
+----
 
-- **Analytical consistency**: MR-MAS reproduced literature-supported MR signals and maintained conservative interpretations for implausible, unsupported, or considered non-causal trait pairs.
-- **Trait retrieval robustness**: TraitMatcher achieved strong Top-k retrieval performance under noisy and multilingual query settings.
-- **Runtime and cost trade-off**: Different base model backends showed different trade-offs among execution time, API cost, and stage-level success rate.
-- **Workflow robustness**: MRKB-guided repair improved code repair success compared with plain LLM-based repair.
-- **Reproducibility**: Repeated workflow executions produced stable causal estimates despite moderate textual variability in generated scripts.
 
+#### [Tip #5] 🌟 There is a lot of room for improvement 🌟
 
-## Intended Use
+There is a lot of room to improve this codebase, so if you end up making changes and want to help the community, please feel free to share the changes you've made! We hope this tool helps you!
 
-MR-MAS is designed as a research assistant framework for automated MR analysis. It is intended to support researchers in organizing MR workflows, generating executable analysis scripts, improving workflow transparency, and preparing manuscript drafts.
 
-MR-MAS should not be treated as a replacement for domain experts. Automatically generated MR results, interpretations, and manuscripts must be reviewed and validated by human researchers before publication or scientific decision-making.
+## 📜 License
 
-## Limitations
+Source Code Licensing: Our project's source code is licensed under the MIT License. This license permits the use, modification, and distribution of the code, subject to certain conditions outlined in the MIT License.
 
-MR-MAS cannot eliminate MR-specific statistical biases, including invalid instrumental variables, horizontal pleiotropy, weak instruments, sample overlap, population heterogeneity, or limitations caused by GWAS data quality. Its causal interpretations remain conditional on the validity of MR assumptions and the quality of the input datasets.
+## 📬 Contact
 
-The current workflow follows a largely predefined stage structure. Future extensions may include more dynamic planning, adaptive scheduling, stronger randomness control, and broader large-scale validation.
+If you would like to get in touch, feel free to reach out to [sschmi46@jhu.edu](mailto:sschmi46@jhu.edu)
 
-## Code and Data Availability
+## Reference / Bibtex
 
-The source code for MR-MAS and the MR Knowledge Base is available in this repository.
 
-The code snapshot corresponding to the experiments reported in the manuscript has been archived on Zenodo:
+### Agent Laboratory
+```bibtex
+@misc{schmidgall2025MR-MASusingllm,
+      title={Agent Laboratory: Using LLM Agents as Research Assistants}, 
+      author={Samuel Schmidgall and Yusheng Su and Ze Wang and Ximeng Sun and Jialian Wu and Xiaodong Yu and Jiang Liu and Zicheng Liu and Emad Barsoum},
+      year={2025},
+      eprint={2501.04227},
+      archivePrefix={arXiv},
+      primaryClass={cs.HC},
+      url={https://arxiv.org/abs/2501.04227}, 
+}
+```
 
-**DOI:** `10.5281/zenodo.20342636`
+### AgentRxiv
+```bibtex
+@misc{schmidgall2025agentrxiv,
+      title={AgentRxiv: Towards Collaborative Autonomous Research}, 
+      author={Samuel Schmidgall and Michael Moor},
+      year={2025},
+      eprint={2503.18102},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2503.18102}, 
+}
+```
 
+## Data Preparation
+Mendelian Randomization Data Preparation Summary
 
-## Disclaimer
+--------------------------------------------------
 
-This repository is provided for research purposes only. The outputs generated by MR-MAS are automatically produced and should be carefully checked by researchers with appropriate domain expertise. MR-MAS does not provide medical advice, clinical diagnosis, or treatment recommendations.
+Total SNPs in Cleaned Exposure Data: 29 
+
+SNPs with F-statistic >= 10 (Strong Instruments): 29 
+
+Total SNPs in Cleaned Outcome Data: 29 
+
+Total SNPs after Harmonization: 29 
+
+Pruned SNPs File Not Found.
+
+
+

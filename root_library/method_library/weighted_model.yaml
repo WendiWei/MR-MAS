@@ -1,0 +1,55 @@
+WeightedMode:
+  description: >
+    Weighted Mode is a robust Mendelian Randomization (MR) method.
+    It assumes that the most common causal effect estimate (the mode of the SNP-specific estimates)
+    comes from valid instruments, even if many SNPs are invalid.
+    It is particularly useful under the plurality valid assumption.
+  package: TwoSampleMR
+  function: mr
+
+  input_format:
+    required_fields:
+      - SNP
+      - beta.exposure
+      - se.exposure
+      - beta.outcome
+      - se.outcome
+      - effect_allele.exposure
+      - effect_allele.outcome
+      - other_allele.exposure
+      - other_allele.outcome
+
+  prepare_inputs:
+    harmonised_data:
+      type: data.frame
+      description: >
+        A harmonized dataset of exposure and outcome summary statistics.
+        This can be generated using the harmonise_data() function from the TwoSampleMR package.
+      construction: |
+        harmonised_data <- harmonise_data(exposure_data, outcome_data)
+
+  params:
+    method_list: ["mr_weighted_mode"]
+
+  output:
+    type: data.frame
+    fields:
+      - method
+      - b
+      - se
+      - pval
+
+  example_code: |
+    # Step 1: Extract exposure data (example)
+    exposure_data_path <- "D:\\pycharm_projects\\AgentLaboratory\\AgentLaboratory\\research_results\\processed_data\\filtered_exposure_data.csv"
+    exposure_data <- read_csv(exposure_data_path)
+
+    # Step 2: Extract outcome data
+    outcome_data_path <- "D:\\pycharm_projects\\AgentLaboratory\\AgentLaboratory\\research_results\\processed_data\\filtered_outcome_data.csv"
+    outcome_data <- read_csv(outcome_data_path)
+
+    # Step 3: Harmonize the datasets
+    harmonised_data <- harmonise_data(exposure_data, outcome_data)
+
+    # Step 4: Perform MR using the Weighted Mode method
+    mr_result <- mr(harmonised_data, method_list = c("mr_weighted_mode"))

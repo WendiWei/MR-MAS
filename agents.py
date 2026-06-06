@@ -12,17 +12,45 @@ class ReviewersAgent:
         self.openai_api_key = openai_api_key
 
     def inference(self, plan, report):
-        reviewer_1 = "You are a harsh but fair reviewer and expect good experiments that lead to insights for the research topic."
-        review_1 = get_score(outlined_plan=plan, latex=report, reward_model_llm=self.model, reviewer_type=reviewer_1, openai_api_key=self.openai_api_key)
+        reviewer_1 = (
+            "You are a harsh but fair STROBE-MR-informed reviewer focusing on MR study design, "
+            "data sources, genetic instruments, harmonization, and core MR assumptions."
+        )
+        review_1 = get_score(
+            outlined_plan=plan,
+            latex=report,
+            reward_model_llm=self.model,
+            reviewer_type=reviewer_1,
+            openai_api_key=self.openai_api_key
+        )
 
-        reviewer_2 = "You are a harsh and critical but fair reviewer who is looking for an idea that would be impactful in the field."
-        review_2 = get_score(outlined_plan=plan, latex=report, reward_model_llm=self.model, reviewer_type=reviewer_2, openai_api_key=self.openai_api_key)
+        reviewer_2 = (
+            "You are a harsh but fair STROBE-MR-informed reviewer focusing on MR methods, "
+            "executed R-based results, sensitivity analyses, effect estimates, confidence intervals, "
+            "p-values, and method-level consistency."
+        )
+        review_2 = get_score(
+            outlined_plan=plan,
+            latex=report,
+            reward_model_llm=self.model,
+            reviewer_type=reviewer_2,
+            openai_api_key=self.openai_api_key
+        )
 
-        reviewer_3 = "You are a harsh but fair open-minded reviewer that is looking for novel ideas that have not been proposed before."
-        review_3 = get_score(outlined_plan=plan, latex=report, reward_model_llm=self.model, reviewer_type=reviewer_3, openai_api_key=self.openai_api_key)
+        reviewer_3 = (
+        "You are a harsh but fair STROBE-MR-informed reviewer focusing on cautious causal interpretation, "
+        "limitations, biological plausibility, generalizability, reproducibility, and avoidance of "
+        "unsupported or fabricated claims."
+        )
+        review_3 = get_score(
+            outlined_plan=plan,
+            latex=report,
+            reward_model_llm=self.model,
+            reviewer_type=reviewer_3,
+            openai_api_key=self.openai_api_key
+        )
 
         return f"Reviewer #1:\n{review_1}, \nReviewer #2:\n{review_2}, \nReviewer #3:\n{review_3}"
-
 
 class BaseAgent:
     def __init__(self, model="gpt-4o-mini", notes=None, max_steps=100, openai_api_key=None):
@@ -93,7 +121,6 @@ class BaseAgent:
             steps_exp = int(feedback.split("\n")[0].replace("```EXPIRATION ", ""))
             feedback = extract_prompt(feedback, "EXPIRATION")
         self.history.append((steps_exp, f"Step #{step}, Phase: {phase}, Feedback: {feedback}, Your response: {model_resp}"))
-        # remove histories that have expiration dates
         for _i in reversed(range(len(self.history))):
             if self.history[_i][0] is not None:
                 self.history[_i] = (self.history[_i][0] - 1, self.history[_i][1])
@@ -104,7 +131,7 @@ class BaseAgent:
         return model_resp
 
     def reset(self):
-        self.history.clear()  # Clear the deque
+        self.history.clear()
         self.prev_comm = ""
 
     def context(self, phase):
@@ -297,13 +324,6 @@ class DataAnalyst(BaseAgent):
                 sr_str,
                 f"Current Literature Review: {self.lit_review_sum}\nPlan: {self.plan}",
                 f"Current Plan: {self.plan}")
-        #elif phase == "running experiments":
-        #    return (
-        #        sr_str,
-        #        f"Current Literature Review: {self.lit_review_sum}\n"
-        #        f"Current Plan: {self.plan}\n"
-        #        f"Current Dataset code: {self.dataset_code}\n"
-        #    )
         return ""
 
     def example_command(self, phase):
@@ -569,8 +589,7 @@ class BiologicalEngineer(BaseAgent):
                 "Make sure to extensively discuss the experimental results in your summary.\n"
                 "When performing a command, make sure to include the three ticks (```) at the top and bottom ```COMMAND\ntext\n``` where COMMAND is the specific command you want to run (e.g. ADD_PAPER, FULL_TEXT, SUMMARY). Do not use the word COMMAND make sure to use the actual command, e.g. your command should look exactly like this: ```ADD_PAPER\ntext\n``` (where the command could be from ADD_PAPER, FULL_TEXT, SUMMARY)\n"
             )
-        # You must generate a short search query (2–4 keywords) that combines one exposure, one outcome, and optionally one method.To conduct an effective literature review for a Mendelian Randomization (MR) study, alternate your search strategy across rounds. In odd-numbered rounds, generate short queries (2–4 keywords) combining one exposure, one outcome, and optionally a method term like “MR”. In even-numbered rounds, focus on MR methodology, using short phrases related to specific methods (e.g., “MR Egger”, “CAUSE”).that like:exposure + outcome、exposure + MR、outcome + MR、exposure + outcome + MR、specific methods of MR.
-        # You must combine at least one exposure (e.g., BMI, LDL-C, smoking) and one outcome (e.g., coronary artery disease, Type 2 Diabetes).Optionally, you may include a method keyword such as “Mendelian Randomization”, “MR-Egger”, “CAUSE”, or “MR”.
+
         elif phase == "plan formulation":
             return (
                 "You can produce dialogue using the following command: ```DIALOGUE\ndialogue here\n```\n where 'dialogue here' is the actual dialogue you will send and DIALOGUE is just the word DIALOGUE.\n"
@@ -613,7 +632,6 @@ class BiologicalEngineer(BaseAgent):
                 "You have access to PubMed and can perform two search operations: (1) finding many different paper summaries from a search query and (2) getting a single full paper text for an PubMed paper.Once you have retrieved a list of papers using the SUMMARY command, immediately follow up by reading the full text of any paper that appears relevant using the FULL_TEXT command.\n"
                 "You must not only identify papers directly relevant to the research topic, but also collect methodological and classic MR papers.These include papers that introduce or compare MR methods such as IVW, MR-Egger, CAUSE, MR-PRESSO, etc.After reading the full text, always decide whether to add the paper. A paper that is relevant, **introduces a novel MR method, or is widely cited as foundational must be added.This ensures that your review captures both application-specific and theoretical developments in Mendelian Randomization.\n"
             )
-            # "your goal is not only to retrieve papers specifically relevant to the research topic, but also to collect foundational and methodological papers that introduce or compare core Mendelian Randomization techniques.If you find a paper that (1) is directly related to the research topic, (2) introduces a novel MR method, or (3) is widely cited as a classic in MR methodology (e.g., IVW, MR-Egger, Weighted Median, MR-PRESSO), you should add it to the literature review using the ADD_PAPER command after reading its full text.This ensures the literature review includes not only applied studies but also the theoretical underpinnings of Mendelian Randomization.Prioritize meaningful and concise summaries, and avoid adding irrelevant or duplicated content.\n"
             rev_papers = "Papers in your review so far: " + " ".join([_paper["PubMed_id"] for _paper in self.lit_review])
             phase_str += rev_papers if len(self.lit_review) > 0 else ""
         elif phase == "plan formulation":
@@ -622,9 +640,6 @@ class BiologicalEngineer(BaseAgent):
                 "Your goal is to produce plans that would make good experiments for the given topic.You should aim for a very simple experiment that showcases your plan, not a complex one.\n" 
                 "Your plans should provide a clear outline for how to achieve the task,including What processing steps will be applied and how to realize.What methods will be used and how to realize.What tools or R packages are required (e.g., the TwoSampleMR package).\n"
                 "Your current task is to construct a complete, end-to-end basic MR experiment plan\n"
-                # "You are a biological engineer being directed by a statistical geneticist  who will help you come up with a good plan, and you interact with them through dialogue.\n"
-                # "Your goal is to produce plans that would make good experiments for the given topic. You should aim for a very simple experiment that showcases your plan, not a complex one. You should integrate the provided literature review and come up with plans on how to expand and build on these works for the given topic. Your plans should provide a clear outline for how to achieve the task,  including the Mendelian randomization methods to be used and implemented, the datasets to be identified and analyzed, and the specific details of the experiment. \n"
-                # Your idea should be very innovative and unlike anything seen before.
             )
         elif phase == "running experiments":
             phase_str = (
@@ -657,45 +672,21 @@ class BiologicalEngineer(BaseAgent):
     def role_description(self):
         return "A bioinformatics engineer dedicated to genomic data analysis and Mendelian Randomization studies, working at a premier research institute."
 
-    def add_review(self, review, arx_eng, agentrxiv=False, GLOBAL_AGENTRXIV=None):
-        try:
-            if agentrxiv:
-                # 如果使用的是 AgentRxiv 数据源：
-                # 从 review 文本中提取 PubMed ID（第一行）和摘要（其余部分）
-                PubMed_id = review.split("\n")[0]
-                review_text = "\n".join(review.split("\n")[1:])
-                # 调用 AgentRxiv 全局对象获取该论文的全文
-                full_text = GLOBAL_AGENTRXIV.retrieve_full_text(PubMed_id, )
-            else:
-                # 如果使用的是默认的 arx_eng 引擎：
-                # 从 review 中提取 PubMed ID 和摘要，按第一行和其余部分分开
-                PubMed_id, review_text = review.strip().split("\n", 1)
-                # 调用 arx_eng 引擎获取该论文全文
-                pmcid = arx_eng.get_paper_pmcid(PubMed_id)
-                full_text = arx_eng.retrieve_full_paper_text(pmcid)
+    def add_review(self, review, arx_eng):
 
-            # 构造文献综述条目，包括 PubMed ID、全文和用户提供的摘要
-            review_entry = {
+        PubMed_id, review_text = review.strip().split("\n", 1)
+        pmcid = arx_eng.get_paper_pmcid(PubMed_id)
+        full_text = arx_eng.retrieve_full_paper_text(pmcid)
+
+        review_entry = {
                 "PubMed_id": PubMed_id,
                 "full_text": full_text,
                 "summary": review_text,
-            }
+        }
+        self.lit_review.append(review_entry)
+        print(self.lit_review)
+        return f"Successfully added paper {PubMed_id}", full_text
 
-            # 将该条目添加到文献综述列表中
-            self.lit_review.append(review_entry)
-            print(self.lit_review)
-
-            # 返回成功消息和全文内容
-            return f"Successfully added paper {PubMed_id}", full_text
-
-        except Exception as e:
-            # 如果过程中出现异常（如格式错误或无效 ID），返回错误消息
-            return (
-                f"Error trying to add review -- bad formatting, try again: {str(e)}. "
-                "Your provided PubMed ID might not be valid. Make sure it references a real paper, "
-                "which can be found using the SUMMARY command.",
-                ""
-            )
 
     def format_review(self):
         return "Provided here is a literature review on this topic:\n" + "\n".join(

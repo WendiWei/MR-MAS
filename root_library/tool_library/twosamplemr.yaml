@@ -1,0 +1,470 @@
+# ------------------------
+# TwoSampleMR 完整方法索引
+# ------------------------
+
+
+# ------------------------
+# 基本 MR 方法
+# ------------------------
+
+mr:
+  description: "Perform Mendelian Randomization using available MR methods. Input must be harmonised data."
+  inputs:
+    dat:
+      type: "data.frame"
+      required: true
+      description: "Harmonised exposure and outcome summary statistics."
+  usage: "res <- mr(dat)"
+  examples: |
+    res <- mr(dat)
+    res
+
+mr_ivw:
+  description: "Inverse-Variance Weighted (IVW) method."
+  inputs:
+    dat:
+      type: "data.frame"
+      required: true
+      description: "Harmonised data."
+    method_list:
+      type: "character vector"
+      required: false
+      description: "Specify 'mr_ivw' to perform IVW method only."
+  usage: "mr(dat, method_list=c('mr_ivw'))"
+  examples: |
+    res <- mr(dat, method_list=c("mr_ivw"))
+    res
+
+mr_egger_regression:
+  description: "MR Egger regression for detecting directional horizontal pleiotropy."
+  inputs:
+    dat:
+      type: "data.frame"
+      required: true
+      description: "Harmonised data."
+    method_list:
+      type: "character vector"
+      required: false
+      description: "Specify 'mr_egger_regression' to perform MR Egger only."
+  usage: "mr(dat, method_list=c('mr_egger_regression'))"
+  examples: |
+    res <- mr(dat, method_list=c("mr_egger_regression"))
+    res
+
+mr_singlesnp:
+  description: "Perform single SNP MR analysis using Wald ratio or other methods."
+  inputs:
+    dat:
+      type: "data.frame"
+      required: true
+      description: "Harmonised data."
+    single_method:
+      type: "character"
+      required: false
+      description: "Method for single SNP analysis. Default 'mr_wald_ratio'."
+    all_method:
+      type: "character vector"
+      required: false
+      description: "Methods for combined test. Default IVW + MR Egger."
+  usage: "mr_singlesnp(dat, single_method='mr_wald_ratio', all_method=c('mr_ivw','mr_egger_regression'))"
+  examples: |
+    res_single <- mr_singlesnp(dat)
+    res_single <- mr_singlesnp(dat, single_method="mr_meta_fixed")
+    res_single <- mr_singlesnp(dat, all_method="mr_two_sample_ml")
+
+mr_leaveoneout:
+  description: "Perform leave-one-out analysis to identify influential SNPs."
+  inputs:
+    dat:
+      type: "data.frame"
+      required: true
+      description: "Harmonised data."
+    method:
+      type: "character"
+      required: false
+      description: "Method for MR. Default 'mr_ivw'."
+  usage: "mr_leaveoneout(dat, method='mr_ivw')"
+  examples: |
+    res_loo <- mr_leaveoneout(dat)
+    head(res_loo)
+
+mr_heterogeneity:
+  description: "Test for heterogeneity across SNPs for MR methods."
+  inputs:
+    dat:
+      type: "data.frame"
+      required: true
+      description: "Harmonised data."
+    method_list:
+      type: "character vector"
+      required: false
+      description: "Subset of methods to test heterogeneity."
+  usage: "mr_heterogeneity(dat, method_list=c('mr_ivw','mr_egger_regression'))"
+  examples: |
+    mr_heterogeneity(dat)
+    mr_heterogeneity(dat, method_list=c("mr_egger_regression","mr_ivw"))
+
+mr_pleiotropy_test:
+  description: "Test for directional horizontal pleiotropy using MR Egger intercept."
+  inputs:
+    dat:
+      type: "data.frame"
+      required: true
+      description: "Harmonised data."
+  usage: "mr_pleiotropy_test(dat)"
+  examples: |
+    mr_pleiotropy_test(dat)
+
+mr_report:
+  description: "Generate self-contained report (HTML/Word/PDF) with MR analyses and plots."
+  inputs:
+    dat:
+      type: "data.frame"
+      required: true
+      description: "Harmonised data."
+  usage: "mr_report(dat)"
+  examples: |
+    mr_report(dat)
+
+
+# ------------------------
+# Steiger / 方向性测试
+# ------------------------
+directionality_test:
+  description: "Check causal direction between exposure and outcome using Steiger test."
+  inputs:
+    dat:
+      type: "data.frame"
+      required: true
+      description: "Harmonised data."
+  usage: "directionality_test(dat)"
+  examples: |
+    out <- directionality_test(dat)
+    knitr::kable(out)
+
+mr_steiger:
+  description: "Steiger directionality test for MR, assessing variance explained by SNPs."
+  inputs:
+    p_exp:
+      type: "numeric vector"
+      required: true
+      description: "P-values for exposure."
+    p_out:
+      type: "numeric vector"
+      required: true
+      description: "P-values for outcome."
+    n_exp:
+      type: "numeric"
+      required: true
+      description: "Sample size for exposure."
+    n_out:
+      type: "numeric"
+      required: true
+      description: "Sample size for outcome."
+    r_exp:
+      type: "numeric vector"
+      required: false
+      description: "Optional correlation coefficients for exposure SNPs."
+    r_out:
+      type: "numeric vector"
+      required: false
+      description: "Optional correlation coefficients for outcome SNPs."
+  usage: "mr_steiger(p_exp, p_out, n_exp, n_out, r_exp, r_out)"
+  examples: |
+    mr_steiger(
+      p_exp = dat$pval.exposure,
+      p_out = dat$pval.outcome,
+      n_exp = dat$samplesize.exposure,
+      n_out = dat$samplesize.outcome,
+      r_exp = rep(NA,length(dat$pval.exposure)),
+      r_out = rep(NA,length(dat$pval.exposure))
+    )
+
+
+# ------------------------
+# 多变量 MR 方法
+# ------------------------
+mv_multiple:
+  description: "Perform multivariable MR analysis with multiple exposures."
+  inputs:
+    mvdat:
+      type: "data.frame"
+      required: true
+      description: "Harmonised multi-exposure data."
+  usage: "mv_multiple(mvdat)"
+  examples: |
+    res <- mv_multiple(mvdat)
+    res
+
+mv_residual:
+  description: "Alternative multivariable MR using residuals to fit each exposure."
+  inputs:
+    mvdat:
+      type: "data.frame"
+      required: true
+      description: "Harmonised multi-exposure data."
+  usage: "mv_residual(mvdat)"
+  examples: |
+    res <- mv_residual(mvdat)
+
+# ------------------------
+# 高级 MR 方法
+# ------------------------
+mr_raps:
+  description: "MR-RAPS: robust MR with many weak instruments, accounting for pleiotropy."
+  inputs:
+    dat:
+      type: "data.frame"
+      required: true
+      description: "Harmonised data."
+    parameters:
+      type: "list"
+      required: false
+      description: "Options for over.dispersion, loss.function, shrinkage."
+  usage: "mr(dat, method_list=c('mr_raps'))"
+  examples: |
+    res <- mr(dat, method_list=c("mr_raps"))
+
+mr_grip:
+  description: "MR-GRIP: MR-Egger variant with Genotype Recoding Invariance Property."
+  inputs:
+    dat:
+      type: "data.frame"
+      required: true
+      description: "Harmonised data."
+  usage: "mr(dat, method_list=c('mr_grip'))"
+  examples: |
+    res <- mr(dat, method_list=c("mr_grip"))
+
+# ------------------------
+# 可视化函数
+# ------------------------
+mr_scatter_plot:
+  description: "Scatter plot visualizing SNP-level effects on the exposure versus the outcome, with overlaid Mendelian Randomization (MR) regression lines. Supports both single-method visualization and multi-method comparison (e.g., IVW, MR-Egger, Weighted Median, Weighted Mode), allowing clear assessment of causal effect estimates across different MR approaches."
+  inputs:
+    res:
+      type: "data.frame"
+      required: true
+      description: "MR result from mr() or mr_singlesnp()."
+    dat:
+      type: "data.frame"
+      required: true
+      description: "Harmonised data."
+  usage: "mr_scatter_plot(res, dat)"
+  examples: |
+    # === 1. Single-method scatter plot ===
+    # You can use mr_scatter_plot() to draw a scatter plot for a single MR method
+    p1 <- mr_scatter_plot(res, dat)
+    p1[[1]]
+    
+    # === 2. Multi-method comparison plot ===
+    # Start with the same base plot (SNP effects on exposure vs outcome)
+    library(dplyr)
+    library(ggplot2)
+    library(TwoSampleMR)
+    ivw_results <- mr(harmonized_data, method_list = c("mr_ivw"))
+    egger_results <- mr(harmonized_data, method_list = c("mr_egger_regression"))
+    weighted_median_results <- mr(harmonized_data, method_list = c("mr_weighted_median"))
+    weighted_mode_results <- mr(harmonized_data, method_list = c("mr_weighted_mode"))
+    # Combine results from all MR methods
+    res_all <- bind_rows(ivw_results, egger_results, weighted_median_results, weighted_mode_results)
+    # Draw the base plot using mr_scatter_plot for IVW (or any single method)
+    p1 <- mr_scatter_plot(ivw_results, harmonized_data)
+    # Add regression lines for other MR methods to the base plot
+    p_multi <- p1[[1]] +
+      geom_abline(data = res_all, aes(intercept = 0, slope = b, color = method), linetype = "dashed", size = 1)
+    # Display the plot
+    print(p_multi)
+
+mr_forest_plot:
+  description: "Forest plot for visualizing SNP-level causal effect estimates from a single MR method. This function is designed to plot the effect of each SNP (with 95% CI) used in an MR analysis, based on the results from `mr_singlesnp()`. "
+  inputs:
+    res_single:
+      type: "data.frame"
+      required: true
+      description: "Result from mr_singlesnp(); contains SNP-specific causal estimates."
+  usage: "mr_forest_plot(res_single)"
+  examples: |
+    res_single <- mr_singlesnp(harmonized_data)
+    p2 <- mr_forest_plot(res_single)
+    p2[[1]]
+
+mr_leaveoneout_plot:
+  description: "Visualize leave-one-out analysis results."
+  inputs:
+    res_loo:
+      type: "data.frame"
+      required: true
+      description: "Result from mr_leaveoneout()."
+  usage: "mr_leaveoneout_plot(res_loo)"
+  examples: |
+    p3 <- mr_leaveoneout_plot(res_loo)
+    p3[[1]]
+
+mr_funnel_plot:
+  description: "Funnel plot to evaluate reliability of MR analysis."
+  inputs:
+    res_single:
+      type: "data.frame"
+      required: true
+      description: "Result from mr_singlesnp()."
+  usage: "mr_funnel_plot(res_single)"
+  examples: |
+    res_single <- mr_singlesnp(harmonized_data)
+    p4 <- mr_funnel_plot(res_single)
+    p4[[1]]
+
+# ------------------------
+# 数据管理函数
+# ------------------------
+format_data:
+  description: >
+    Convert raw GWAS summary statistics into TwoSampleMR compatible format.
+    This function standardizes column names and ensures the data can be used
+    for downstream MR analyses.
+  inputs:
+    data:
+      type: "data.frame"
+      required: true
+      description: "Raw GWAS summary statistics for exposure or outcome."
+    type:
+      type: "character"
+      required: true
+      description: "Specify 'exposure', 'outcome', or 'both'."
+    snp_col:
+      type: "character"
+      required: true
+      description: "Column name for SNP IDs."
+    beta_col:
+      type: "character"
+      required: true
+      description: "Column name for effect estimates."
+    se_col:
+      type: "character"
+      required: true
+      description: "Column name for standard errors."
+    effect_allele_col:
+      type: "character"
+      required: true
+      description: "Column name for effect alleles."
+    other_allele_col:
+      type: "character"
+      required: true
+      description: "Column name for other alleles."
+    eaf_col:
+      type: "character"
+      required: false
+      description: "Column name for effect allele frequency (optional)."
+    pval_col:
+      type: "character"
+      required: false
+      description: "Column name for p-values (optional)."
+
+  examples: |
+    # Convert raw exposure GWAS to TwoSampleMR format
+    formatted_exposure <- format_data(
+      data = exposure_data,
+      type = "exposure",
+      snp_col = "SNP",
+      beta_col = "beta.exposure",
+      se_col = "se.exposure",
+      effect_allele_col = "effect_allele.exposure",
+      other_allele_col = "other_allele.exposure"
+    )
+    
+    # Convert raw outcome GWAS to TwoSampleMR format
+    formatted_outcome <- format_data(
+      data = outcome_data,
+      type = "outcome",
+      snp_col = "SNP",
+      beta_col = "beta.outcome",
+      se_col = "se.outcome",
+      effect_allele_col = "effect_allele.outcome",
+      other_allele_col = "other_allele.outcome"
+    )
+
+# ------------------------
+# 结果管理函数
+# ------------------------
+split_outcome:
+  description: "Split combined outcome column into separate outcome name and ID."
+  inputs:
+    res:
+      type: "data.frame"
+      required: true
+      description: "MR results from mr()."
+  usage: "split_outcome(res)"
+  examples: |
+    split_outcome(res)
+
+split_exposure:
+  description: "Split combined exposure column into separate exposure name and ID."
+  inputs:
+    res:
+      type: "data.frame"
+      required: true
+      description: "MR results from mr()."
+  usage: "split_exposure(res)"
+  examples: |
+    split_exposure(res)
+
+generate_odds_ratios:
+  description: "Convert log odds ratios to odds ratios with 95% confidence intervals."
+  inputs:
+    res:
+      type: "data.frame"
+      required: true
+      description: "MR results from mr()."
+  usage: "generate_odds_ratios(res)"
+  examples: |
+    generate_odds_ratios(res)
+
+subset_on_method:
+  description: "Subset MR results on a specific method."
+  inputs:
+    res:
+      type: "data.frame"
+      required: true
+      description: "MR results from mr()."
+  usage: "subset_on_method(res)"
+  examples: |
+    subset_on_method(res)
+
+combine_all_mrresults:
+  description: "Combine MR results, heterogeneity, pleiotropy, single SNP analyses into one dataframe."
+  inputs:
+    res:
+      type: "data.frame"
+      required: true
+      description: "MR results from mr()."
+    het:
+      type: "data.frame"
+      required: true
+      description: "Heterogeneity results from mr_heterogeneity()."
+    plt:
+      type: "data.frame"
+      required: true
+      description: "Pleiotropy results from mr_pleiotropy_test()."
+    sin:
+      type: "data.frame"
+      required: true
+      description: "Single SNP results from mr_singlesnp()."
+    ao_slc:
+      type: "logical"
+      required: false
+      description: "Whether to include all exposure-outcome combinations. Default TRUE."
+    Exp:
+      type: "logical"
+      required: false
+      description: "Whether to include exposure information. Default TRUE."
+    split.exposure:
+      type: "logical"
+      required: false
+      description: "Split exposure column. Default FALSE."
+    split.outcome:
+      type: "logical"
+      required: false
+      description: "Split outcome column. Default TRUE."
+  usage: "combine_all_mrresults(res, het, plt, sin, ao_slc=TRUE, Exp=TRUE, split.exposure=FALSE, split.outcome=TRUE)"
+  examples: |
+    all_res <- combine_all_mrresults(res, het, plt, sin, ao_slc=TRUE, Exp=TRUE, split.exposure=FALSE, split.outcome=TRUE)

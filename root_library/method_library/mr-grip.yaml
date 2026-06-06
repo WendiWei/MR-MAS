@@ -1,0 +1,125 @@
+mr_grip:
+  description: >
+    MR-GRIP is an MR-Egger variant in TwoSampleMR that incorporates the Genotype Recoding
+    Invariance Property to improve robustness to allele recoding in the presence of pleiotropy.
+  package: TwoSampleMR
+  function: mr_grip
+  input_format:
+    required_fields: [beta.exposure, se.exposure, beta.outcome, se.outcome]
+  params:
+    parameters: default_parameters()
+  output:
+    type: data.frame | list
+    fields: [b, se, pval, nsnp]
+  common_errors:
+    - error_type: wrong_function_call
+      error_message: "缺少参数"b_out",也缺失默认值"
+      cause: "The installed TwoSampleMR version expects explicit vectors, not mr_grip(dat)."
+      repair_action: "Call mr_grip(b_exp=..., b_out=..., se_exp=..., se_out=..., parameters=default_parameters())."
+      repair_code: |
+        res <- mr_grip(
+          b_exp = dat$beta.exposure,
+          b_out = dat$beta.outcome,
+          se_exp = dat$se.exposure,
+          se_out = dat$se.outcome,
+          parameters = default_parameters()
+        )
+    - error_type: too_many_snps
+      error_message: "Too many SNPs for MR-GRIP"
+      cause: "Large unpruned instrument sets can slow robust MR methods and are usually unnecessary."
+      repair_action: "Keep the top 200-500 SNPs by exposure p-value or perform LD clumping before MR-GRIP."
+  example_code: |
+
+        library(data.table)
+
+        # User GWAS Catalog harmonized files
+        exposure_file <- "D:/project/weiwei/research_results/raw_gwas_data/GCST90310294.h.tsv.gz"
+        outcome_file  <- "D:/project/weiwei/research_results/raw_gwas_data/GCST90132315.h.tsv.gz"
+
+        exposure_data <- fread(exposure_file)
+        outcome_data  <- fread(outcome_file)
+
+        exp <- exposure_data[, .(
+          SNP = rsid,
+          beta.exposure = as.numeric(beta),
+          se.exposure = as.numeric(standard_error),
+          effect_allele.exposure = toupper(as.character(effect_allele)),
+          other_allele.exposure = toupper(as.character(other_allele)),
+          pval.exposure = as.numeric(p_value)
+        )]
+
+        out <- outcome_data[, .(
+          SNP = rsid,
+          beta.outcome = as.numeric(beta),
+          se.outcome = as.numeric(standard_error),
+          effect_allele.outcome = toupper(as.character(effect_allele)),
+          other_allele.outcome = toupper(as.character(other_allele)),
+          pval.outcome = as.numeric(p_value)
+        )]
+
+        exp <- exp[!is.na(SNP) & SNP != "" & !is.na(beta.exposure) & !is.na(se.exposure) &
+                     !is.na(effect_allele.exposure) & !is.na(other_allele.exposure) &
+                     !is.na(pval.exposure) & se.exposure > 0]
+        out <- out[!is.na(SNP) & SNP != "" & !is.na(beta.outcome) & !is.na(se.outcome) &
+                     !is.na(effect_allele.outcome) & !is.na(other_allele.outcome) &
+                     !is.na(pval.outcome) & se.outcome > 0]
+
+        exp <- exp[!duplicated(SNP)]
+        out <- out[!duplicated(SNP)]
+
+        gwas_thresh <- 5e-8
+        min_snps <- 3
+        max_snps <- 500
+
+        inst <- exp[pval.exposure < gwas_thresh]
+        inst <- inst[!duplicated(SNP)]
+
+        if (nrow(inst) < min_snps) {
+          warning("Too few genome-wide significant SNPs. Relaxing threshold to 5e-6.")
+          gwas_thresh <- 5e-6
+          inst <- exp[pval.exposure < gwas_thresh]
+          inst <- inst[!duplicated(SNP)]
+        }
+        if (nrow(inst) < min_snps) stop("Too few exposure instruments.")
+
+        dat <- merge(inst, out, by = "SNP")
+
+        is_palindromic <- function(a1, a2) {
+          (a1 == "A" & a2 == "T") | (a1 == "T" & a2 == "A") |
+            (a1 == "C" & a2 == "G") | (a1 == "G" & a2 == "C")
+        }
+
+        dat <- dat[!is_palindromic(effect_allele.exposure, other_allele.exposure)]
+        dat[, same_allele := effect_allele.exposure == effect_allele.outcome &
+              other_allele.exposure == other_allele.outcome]
+        dat[, flip_allele := effect_allele.exposure == other_allele.outcome &
+              other_allele.exposure == effect_allele.outcome]
+        dat <- dat[same_allele == TRUE | flip_allele == TRUE]
+        dat[flip_allele == TRUE, beta.outcome := -beta.outcome]
+        dat[, c("same_allele", "flip_allele") := NULL]
+        setorder(dat, pval.exposure)
+        if (nrow(dat) > max_snps) dat <- dat[1:max_snps]
+        if (nrow(dat) < min_snps) stop("Too few harmonized SNPs.")
+
+
+    if (!requireNamespace("TwoSampleMR", quietly = TRUE)) {
+      if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes", repos = "https://cloud.r-project.org")
+      remotes::install_github("MRCIEU/TwoSampleMR")
+    }
+    library(TwoSampleMR)
+
+    out_dir <- "D:/project/weiwei/research_results/results/mr_grip"
+    dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+    write.csv(dat, file.path(out_dir, "mr_grip_harmonized_data.csv"), row.names = FALSE)
+
+    mr_grip_res <- mr_grip(
+      b_exp = dat$beta.exposure,
+      b_out = dat$beta.outcome,
+      se_exp = dat$se.exposure,
+      se_out = dat$se.outcome,
+      parameters = default_parameters()
+    )
+
+    saveRDS(mr_grip_res, file.path(out_dir, "mr_grip_result.rds"))
+    result_table <- tryCatch(as.data.frame(mr_grip_res), error = function(e) data.frame(result = capture.output(print(mr_grip_res))))
+    write.csv(result_table, file.path(out_dir, "mr_grip_results.csv"), row.names = FALSE)
